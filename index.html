@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frutín y la Misión del PAE - Juego Educativo Interactivo</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Fredoka', sans-serif;
+            user-select: none;
+            overflow-x: hidden;
+        }
+
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        /* Pulse Animations */
+        @keyframes frutinBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-8px) scale(1.04); }
+        }
+        .frutin-float {
+            animation: frutinBounce 2.2s infinite ease-in-out;
+        }
+
+        .drop-target-active {
+            border-color: #f59e0b !important;
+            background-color: #fef3c7 !important;
+        }
+
+        .drag-item {
+            cursor: grab;
+            transition: transform 0.15s ease;
+        }
+        .drag-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- Top Header Banner - PAE Guatemala & Level Selector -->
+    <header class="w-full bg-white/95 backdrop-blur-md shadow-lg border-b-4 border-emerald-500 p-2 md:p-3 sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-3">
+            
+            <!-- PAE Official Styled Vector Logo -->
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-50 px-3 py-1.5 rounded-2xl border-2 border-amber-300 shadow-inner flex items-center">
+                    <svg class="h-10 md:h-12" viewBox="0 0 280 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 15 10 L 35 10 C 45 10 45 35 35 35 L 25 35 L 25 65 L 15 65 Z" fill="#F59E0B" />
+                        <path d="M 25 35 L 35 35 C 45 35 45 10 35 10 Z" fill="#D97706" />
+                        <path d="M 15 55 L 25 55 L 20 68 Z" fill="#FCA5A5" />
+                        <path d="M 60 65 L 80 10 L 100 65 L 85 65 L 80 50 L 70 50 L 65 65 Z" fill="#2563EB" />
+                        <circle cx="75" cy="30" r="3" fill="#FFFFFF"/>
+                        <circle cx="85" cy="38" r="3" fill="#FFFFFF"/>
+                        <circle cx="75" cy="45" r="3" fill="#FFFFFF"/>
+                        <path d="M 110 10 L 140 10 L 140 22 L 123 22 L 123 32 L 138 32 L 138 43 L 123 43 L 123 53 L 140 53 L 140 65 L 110 65 Z" fill="#16A34A" />
+                        <circle cx="108" cy="18" r="3" fill="#4B5563"/>
+                        <circle cx="108" cy="37" r="3" fill="#4B5563"/>
+                        <circle cx="108" cy="56" r="3" fill="#4B5563"/>
+                        <text x="148" y="32" font-family="Fredoka, sans-serif" font-weight="700" font-size="16" fill="#F59E0B">Programa de</text>
+                        <text x="148" y="55" font-family="Fredoka, sans-serif" font-weight="700" font-size="20" fill="#2563EB">Alimentación <tspan fill="#16A34A">Escolar</tspan></text>
+                    </svg>
+                </div>
+                <div class="hidden sm:block">
+                    <span class="text-xs text-slate-500 font-bold block uppercase tracking-wider">Fe y Alegría Guatemala</span>
+                    <h1 class="text-sm md:text-base font-extrabold text-emerald-800 leading-tight">Misión: Tu Comida Escolar es un Derecho</h1>
+                </div>
+            </div>
+
+            <!-- Level Navigation Buttons -->
+            <div class="flex items-center gap-1.5 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+                <button id="btn-nav-1" onclick="switchLevel(0)" class="px-3 py-1.5 rounded-xl text-xs md:text-sm font-extrabold transition bg-emerald-500 text-white shadow">
+                    <i class="fa-solid fa-puzzle-piece mr-1"></i> Nivel 1: SIRE
+                </button>
+                <button id="btn-nav-2" onclick="switchLevel(1)" class="px-3 py-1.5 rounded-xl text-xs md:text-sm font-extrabold transition text-slate-600 hover:bg-slate-200">
+                    <i class="fa-solid fa-utensils mr-1"></i> Nivel 2: Plato Nutritivo
+                </button>
+                <button id="btn-nav-3" onclick="switchLevel(2)" class="px-3 py-1.5 rounded-xl text-xs md:text-sm font-extrabold transition text-slate-600 hover:bg-slate-200">
+                    <i class="fa-solid fa-graduation-cap mr-1"></i> Nivel 3: Trivia PAE
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="flex-grow max-w-6xl w-full mx-auto p-3 md:p-6 flex flex-col md:flex-row gap-4 items-stretch justify-center relative">
+        
+        <!-- Left Banner: Frutín Hero Guide & Status -->
+        <aside class="w-full md:w-72 bg-gradient-to-b from-amber-400 via-orange-400 to-amber-500 rounded-3xl p-4 text-white shadow-xl border-4 border-white flex flex-col justify-between shrink-0">
+            <div>
+                <div class="flex items-center gap-3 bg-white/20 p-2.5 rounded-2xl border border-white/30 backdrop-blur-sm frutin-float">
+                    <div class="w-16 h-16 bg-white/30 rounded-full flex items-center justify-center p-1 shrink-0 border-2 border-white shadow-inner">
+                        <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow">
+                            <path d="M 20 40 Q 50 100 80 40 Q 50 20 20 40 Z" fill="#EF4444" />
+                            <path d="M 50 20 C 25 20 20 50 30 75 C 40 90 60 90 70 75 C 80 50 75 20 50 20 Z" fill="#DC2626" />
+                            <circle cx="40" cy="45" r="2" fill="#FDE047"/>
+                            <circle cx="60" cy="45" r="2" fill="#FDE047"/>
+                            <circle cx="50" cy="65" r="2" fill="#FDE047"/>
+                            <path d="M 50 20 Q 30 5 25 15 Q 40 20 50 20 Q 60 20 75 15 Q 70 5 50 20 Z" fill="#16A34A" />
+                            <rect x="32" y="38" width="36" height="14" rx="7" fill="#1E293B"/>
+                            <circle cx="40" cy="45" r="3" fill="#FFFFFF"/>
+                            <circle cx="60" cy="45" r="3" fill="#FFFFFF"/>
+                            <path d="M 42 56 Q 50 63 58 56" stroke="#FFFFFF" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <span class="text-[10px] font-black uppercase text-amber-100 tracking-wider">Héroe Nutritivo</span>
+                        <h2 class="text-xl font-black leading-none drop-shadow">¡FRUTÍN!</h2>
+                        <span class="text-xs text-amber-100 font-semibold">Fe y Alegría GT</span>
+                    </div>
+                </div>
+
+                <!-- Dialogue Speech Bubble -->
+                <div class="mt-4 bg-white text-slate-800 p-3.5 rounded-2xl rounded-tl-none shadow-lg relative border-2 border-amber-200">
+                    <p id="frutin-speech" class="text-xs md:text-sm font-bold leading-snug text-slate-700">
+                        "¡Hola! Ayúdame a armar las piezas del SIRE para asegurar la comida escolar de todos los niños."
+                    </p>
+                </div>
+            </div>
+
+            <!-- Super Energy Bar / Score -->
+            <div class="mt-4 bg-slate-900/40 backdrop-blur-md p-3 rounded-2xl border border-white/20">
+                <div class="flex justify-between items-center text-xs font-bold mb-1">
+                    <span><i class="fa-solid fa-bolt text-yellow-300 mr-1"></i> Energía Nutritiva</span>
+                    <span id="energy-val">0%</span>
+                </div>
+                <div class="w-full bg-slate-700/60 rounded-full h-3.5 overflow-hidden p-0.5 border border-white/30">
+                    <div id="energy-bar" class="bg-gradient-to-r from-yellow-400 via-amber-400 to-emerald-400 h-full rounded-full transition-all duration-500 w-0"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Dynamic Game Stages Area -->
+        <section class="flex-grow bg-slate-800/90 backdrop-blur-md rounded-3xl p-4 md:p-6 border-4 border-slate-700 shadow-2xl flex flex-col justify-between min-h-[500px] relative overflow-hidden">
+            
+            <!-- LEVEL 1: Rompecabezas del SIRE -->
+            <div id="stage-level-1" class="w-full h-full flex flex-col justify-between space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div>
+                        <h3 class="text-lg md:text-xl font-black text-amber-400"><i class="fa-solid fa-puzzle-piece mr-2"></i>Nivel 1: Rompecabezas 3D del SIRE</h3>
+                        <p class="text-xs text-slate-300">Arrastra los 4 bloques del proceso para validar el padrón escolar en la plataforma oficial.</p>
+                    </div>
+                    <span class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full border border-amber-500/40 font-bold" id="puzzle-status">Piezas: 0/4</span>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-grow items-center">
+                    <!-- Draggable Piece Inventory -->
+                    <div class="bg-slate-900/80 p-4 rounded-2xl border-2 border-slate-700 flex flex-col gap-2.5">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1"><i class="fa-solid fa-cubes mr-1"></i> Bloques del SIRE:</span>
+                        <div id="puzzle-pieces-container" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <!-- Drop Station Grid -->
+                    <div class="bg-emerald-950/40 p-4 rounded-2xl border-2 border-emerald-500/50 flex flex-col gap-2">
+                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-1 flex items-center justify-between">
+                            <span><i class="fa-solid fa-server mr-1"></i> Sistema de Registro Escolar</span>
+                            <span id="sire-light" class="w-3 h-3 rounded-full bg-red-500"></span>
+                        </span>
+                        <div class="space-y-2" id="puzzle-slots-container"></div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-700 text-xs text-amber-200 flex items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-amber-400 text-base shrink-0"></i>
+                    <span><strong>Recordatorio PAE:</strong> La alimentación escolar está garantizada por ley. Mantener el padrón escolar al día asegura la ración digna de cada estudiante.</span>
+                </div>
+            </div>
+
+            <!-- LEVEL 2: La Cocina de Frutín - El Plato Saludable -->
+            <div id="stage-level-2" class="hidden w-full h-full flex flex-col justify-between space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                    <div>
+                        <h3 class="text-lg md:text-xl font-black text-emerald-400"><i class="fa-solid fa-plate-wheat mr-2"></i>Nivel 2: Arma el Plato Saludable PAE</h3>
+                        <p class="text-xs text-slate-300">Selecciona los 4 componentes nutritivos correctos. ¡Cuidado con la comida chatarra y las gaseosas!</p>
+                    </div>
+                    <span id="kitchen-counter" class="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/40 font-bold">Piezas del Menú: 0/4</span>
+                </div>
+
+                <!-- Food Selection Grid & Tray Container -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 flex-grow items-center">
+                    <!-- Options Menu -->
+                    <div class="bg-slate-900/80 p-3.5 rounded-2xl border-2 border-slate-700">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-2 block"><i class="fa-solid fa-apple-whole mr-1"></i> Alimentos Disponibles:</span>
+                        <div id="pantry-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                    </div>
+
+                    <!-- Tray & Plate -->
+                    <div class="bg-emerald-950/30 p-4 rounded-2xl border-2 border-emerald-500/40 flex flex-col items-center justify-center relative min-h-[260px]">
+                        <span class="text-xs font-bold text-emerald-400 uppercase tracking-wide mb-2">Plato Escolar Equilibrado</span>
+                        <div class="w-48 h-48 sm:w-56 sm:h-56 rounded-full bg-slate-100 border-8 border-slate-300 shadow-2xl relative grid grid-cols-2 p-2 gap-2 transform rotate-45">
+                            <div id="plate-slot-1" class="border-2 border-dashed border-slate-300 rounded-tl-full flex flex-col items-center justify-center p-2 text-center text-slate-400 -rotate-45">
+                                <span class="text-xs font-extrabold text-slate-500">1. Bebida</span>
+                            </div>
+                            <div id="plate-slot-2" class="border-2 border-dashed border-slate-300 rounded-tr-full flex flex-col items-center justify-center p-2 text-center text-slate-400 -rotate-45">
+                                <span class="text-xs font-extrabold text-slate-500">2. Proteína</span>
+                            </div>
+                            <div id="plate-slot-3" class="border-2 border-dashed border-slate-300 rounded-bl-full flex flex-col items-center justify-center p-2 text-center text-slate-400 -rotate-45">
+                                <span class="text-xs font-extrabold text-slate-500">3. Cereal</span>
+                            </div>
+                            <div id="plate-slot-4" class="border-2 border-dashed border-slate-300 rounded-br-full flex flex-col items-center justify-center p-2 text-center text-slate-400 -rotate-45">
+                                <span class="text-xs font-extrabold text-slate-500">4. Fruta/Verdura</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEVEL 3: La Gran Trivia del PAE -->
+            <div id="stage-level-3" class="hidden w-full h-full flex flex-col justify-between space-y-4">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-2">
+                    <div>
+                        <h3 class="text-lg md:text-xl font-black text-amber-400"><i class="fa-solid fa-graduation-cap mr-2"></i>Nivel 3: La Gran Trivia del PAE</h3>
+                        <p class="text-xs text-slate-300">Demuestra lo que aprendiste sobre tus derechos, el SIRE y la alimentación escolar.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="trivia-progress" class="text-xs bg-amber-500/20 text-amber-300 px-3 py-1 rounded-full border border-amber-500/40 font-bold">Pregunta: 1/5</span>
+                        <span id="trivia-score" class="text-xs bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/40 font-bold">Puntos: 0</span>
+                    </div>
+                </div>
+
+                <!-- Trivia Card Display -->
+                <div class="bg-slate-900/90 p-5 rounded-2xl border-2 border-slate-700 flex flex-col justify-between flex-grow shadow-inner">
+                    <!-- Question Title -->
+                    <div class="mb-4">
+                        <span class="text-[10px] font-black tracking-widest uppercase bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-md border border-amber-500/30">Reto de Conocimiento</span>
+                        <h4 id="trivia-question-title" class="text-base md:text-lg font-black text-white mt-2 leading-snug">
+                            Cargando pregunta...
+                        </h4>
+                    </div>
+
+                    <!-- Answers Grid -->
+                    <div id="trivia-options-container" class="grid grid-cols-1 md:grid-cols-2 gap-3 my-auto">
+                        <!-- Dynamic Buttons -->
+                    </div>
+
+                    <!-- Question Explanation & Hint Footer -->
+                    <div id="trivia-feedback-box" class="mt-4 p-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-300 flex items-center gap-2.5">
+                        <i class="fa-solid fa-lightbulb text-amber-400 text-lg shrink-0"></i>
+                        <span id="trivia-feedback-text">Selecciona la opción correcta para ganar energía nutritiva.</span>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Modal Success / Win -->
+    <div id="modal-success" class="hidden fixed inset-0 z-50 bg-slate-900/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border-4 border-emerald-500 text-center relative overflow-hidden">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-3xl mx-auto mb-3 shadow-inner">
+                <i class="fa-solid fa-star"></i>
+            </div>
+            <h3 class="text-2xl font-black text-emerald-800 mb-1" id="win-title">¡Misión Cumplida!</h3>
+            <p id="win-subtitle" class="text-xs font-bold text-emerald-600 uppercase mb-3">Has completado la meta</p>
+            <div id="win-body" class="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl text-xs text-slate-700 text-left leading-relaxed mb-4"></div>
+            <button id="btn-win-action" onclick="advanceNextLevel()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-extrabold py-3 px-4 rounded-xl shadow-lg hover:from-emerald-600 hover:to-teal-700 transition">
+                ¡Continuar al Siguiente Nivel! <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        // --- STATE VARIABLES ---
+        let currentLevel = 0;
+        let totalEnergy = 0;
+
+        // Level 1 Puzzle Data
+        const puzzleData = [
+            { id: 1, text: "1. Inscripción Escolar", desc: "Matrícula oficial del estudiante.", icon: "fa-user-check", bg: "bg-blue-600" },
+            { id: 2, text: "2. Registro Correcto", desc: "Datos validados en el SIRE.", icon: "fa-id-card", bg: "bg-indigo-600" },
+            { id: 3, text: "3. Acceso al Programa", desc: "Identifica a quién entregar ración.", icon: "fa-clipboard-check", bg: "bg-purple-600" },
+            { id: 4, text: "4. Derecho Dignificado", desc: "Alimentación asegurada por ley.", icon: "fa-award", bg: "bg-emerald-600" }
+        ];
+        let puzzlePlaced = [false, false, false, false];
+
+        // Level 2 Food Pantry Data
+        const pantryFoodItems = [
+            { id: 'f1', name: 'Atol de Maíz / Agua Fruta', group: 1, category: 'Bebida', healthy: true, icon: 'fa-mug-hot', color: 'text-amber-500' },
+            { id: 'f2', name: 'Gaseosa Azucarada', group: 1, category: 'Bebida', healthy: false, icon: 'fa-bottle-water', color: 'text-red-500' },
+            { id: 'f3', name: 'Frijol y Huevo', group: 2, category: 'Proteína', healthy: true, icon: 'fa-egg', color: 'text-yellow-600' },
+            { id: 'f4', name: 'Ricitos / Golosinas', group: 2, category: 'Proteína', healthy: false, icon: 'fa-cookie-bite', color: 'text-red-500' },
+            { id: 'f5', name: 'Tortilla de Maíz / Pan', group: 3, category: 'Cereal', healthy: true, icon: 'fa-bread-slice', color: 'text-amber-600' },
+            { id: 'f6', name: 'Frituras Procesadas', group: 3, category: 'Cereal', healthy: false, icon: 'fa-box-open', color: 'text-red-500' },
+            { id: 'f7', name: 'Fruta Fresca Picada', group: 4, category: 'Fruta/Verdura', healthy: true, icon: 'fa-apple-whole', color: 'text-red-500' },
+            { id: 'f8', name: 'Refresco Artificial', group: 4, category: 'Fruta/Verdura', healthy: false, icon: 'fa-wine-glass', color: 'text-purple-500' }
+        ];
+        let selectedPlateItems = { 1: null, 2: null, 3: null, 4: null };
+
+        // LEVEL 3: Trivia Questions directly from PDF Slides
+        const triviaQuestions = [
+            {
+                q: "¿Por qué la alimentación escolar es un DERECHO para las y los estudiantes?",
+                options: [
+                    { text: "Porque es un regalo o favor especial de la escuela.", correct: false },
+                    { text: "Porque está respaldada por la ley y acompaña tu desarrollo diario.", correct: true },
+                    { text: "Solo aplica si sacas buenas calificaciones.", correct: false }
+                ],
+                explanation: "¡Exacto! La ley reconoce la alimentación escolar como un derecho respaldado para garantizar tu dignidad y desarrollo."
+            },
+            {
+                q: "¿Qué sistema registra formalmente a los estudiantes para asegurar que llegue la ración?",
+                options: [
+                    { text: "El sistema SIRE del MINEDUC.", correct: true },
+                    { text: "Una libreta manual en la cocina.", correct: false },
+                    { text: "Una lista aleatoria en redes sociales.", correct: false }
+                ],
+                explanation: "¡Correcto! El SIRE identifica con exactitud a cada estudiante matriculado para que reciba su alimento."
+            },
+            {
+                q: "¿Qué debes hacer si estás matriculado pero no apareces en el registro del comedor?",
+                options: [
+                    { text: "Quedarte en silencio y no comer.", correct: false },
+                    { text: "Hablar con la dirección para revisar tus datos en el SIRE.", correct: true },
+                    { text: "Comprar comida chatarra todos los días.", correct: false }
+                ],
+                explanation: "¡Muy bien! Ejercer tu voz de forma respetuosa ayuda a corregir errores administrativos y protege tu derecho."
+            },
+            {
+                q: "¿Cuáles son los 3 grupos de alimentos según la función que cumplen en tu cuerpo?",
+                options: [
+                    { text: "Dulces, Gaseosas y Frituras.", correct: false },
+                    { text: "Energéticos, Constructores y Reguladores.", correct: true },
+                    { text: "Furos, Atoles y Golosinas.", correct: false }
+                ],
+                explanation: "¡Excelente! Energéticos (combustible), Constructores (crecimiento) y Reguladores (defensas) cuidan tu cuerpo."
+            },
+            {
+                q: "¿Cómo apoya el programa a la comunidad y a la economía local?",
+                options: [
+                    { text: "Comprando ingredientes a la agricultura familiar y cooperativas locales.", correct: true },
+                    { text: "Importando toda la comida desde otros países lejanos.", correct: false },
+                    { text: "Usando únicamente comida enlatada procesada.", correct: false }
+                ],
+                explanation: "¡Grandioso! Al comprar a productores locales, se logra comida más fresca y se fortalece la economía familiar de la comunidad."
+            }
+        ];
+
+        let currentTriviaIndex = 0;
+        let triviaScore = 0;
+
+        window.onload = function() {
+            initLevel1Puzzle();
+            initLevel2Pantry();
+            initLevel3Trivia();
+            updateEnergyBar(0);
+        };
+
+        function updateEnergyBar(amount) {
+            totalEnergy = Math.max(0, Math.min(100, totalEnergy + amount));
+            document.getElementById('energy-val').innerText = `${totalEnergy}%`;
+            document.getElementById('energy-bar').style.width = `${totalEnergy}%`;
+        }
+
+        function switchLevel(index) {
+            currentLevel = index;
+            
+            document.getElementById('stage-level-1').classList.add('hidden');
+            document.getElementById('stage-level-2').classList.add('hidden');
+            document.getElementById('stage-level-3').classList.add('hidden');
+
+            for(let i=1; i<=3; i++) {
+                const btn = document.getElementById(`btn-nav-${i}`);
+                btn.className = "px-3 py-1.5 rounded-xl text-xs md:text-sm font-extrabold transition text-slate-600 hover:bg-slate-200";
+            }
+
+            const activeBtn = document.getElementById(`btn-nav-${index+1}`);
+            activeBtn.className = "px-3 py-1.5 rounded-xl text-xs md:text-sm font-extrabold transition bg-emerald-500 text-white shadow";
+
+            const frutinSpeech = document.getElementById('frutin-speech');
+            if (index === 0) {
+                document.getElementById('stage-level-1').classList.remove('hidden');
+                frutinSpeech.innerText = '"¡Bienvenido! Unamos los 4 bloques del SIRE para validar la ración escolar."';
+            } else if (index === 1) {
+                document.getElementById('stage-level-2').classList.remove('hidden');
+                frutinSpeech.innerText = '"¡Hora de comer sano! Escoge 1 opción nutritiva por cada grupo. ¡Cuidado con las gaseosas y ricitos!"';
+            } else if (index === 2) {
+                document.getElementById('stage-level-3').classList.remove('hidden');
+                frutinSpeech.innerText = '"¡La Gran Trivia! Responde correctamente las preguntas basadas en la misión del PAE."';
+                loadTriviaQuestion();
+            }
+        }
+
+        // --- LEVEL 1: PUZZLE LOGIC ---
+        function initLevel1Puzzle() {
+            const piecesContainer = document.getElementById('puzzle-pieces-container');
+            const slotsContainer = document.getElementById('puzzle-slots-container');
+            
+            piecesContainer.innerHTML = '';
+            slotsContainer.innerHTML = '';
+            puzzlePlaced = [false, false, false, false];
+
+            const shuffled = [...puzzleData].sort(() => Math.random() - 0.5);
+
+            shuffled.forEach(item => {
+                const p = document.createElement('div');
+                p.className = `${item.bg} text-white p-3 rounded-xl shadow-lg border-2 border-white/30 drag-item flex items-center gap-2 text-xs font-bold select-none cursor-pointer`;
+                p.id = `piece-${item.id}`;
+                p.draggable = true;
+                p.innerHTML = `<i class="fa-solid ${item.icon} text-base"></i> <span>${item.text}</span>`;
+                
+                p.ondragstart = (e) => {
+                    e.dataTransfer.setData('text/plain', item.id);
+                };
+
+                p.onclick = () => autoPlacePuzzlePiece(item.id);
+
+                piecesContainer.appendChild(p);
+            });
+
+            puzzleData.forEach(item => {
+                const slot = document.createElement('div');
+                slot.className = "w-full p-3 rounded-xl border-2 border-dashed border-slate-600 bg-slate-900/50 flex items-center justify-between text-xs transition drop-target";
+                slot.id = `slot-${item.id}`;
+                slot.innerHTML = `
+                    <span class="text-slate-400 font-bold"><i class="fa-solid fa-lock mr-2"></i>Esperando bloque ${item.id}...</span>
+                    <span class="text-[10px] text-slate-500 font-semibold">${item.desc}</span>
+                `;
+
+                slot.ondragover = (e) => {
+                    e.preventDefault();
+                    slot.classList.add('drop-target-active');
+                };
+                slot.ondragleave = () => {
+                    slot.classList.remove('drop-target-active');
+                };
+                slot.ondrop = (e) => {
+                    e.preventDefault();
+                    slot.classList.remove('drop-target-active');
+                    const pieceId = parseInt(e.dataTransfer.getData('text/plain'));
+                    placePuzzlePiece(pieceId, item.id);
+                };
+
+                slotsContainer.appendChild(slot);
+            });
+        }
+
+        function autoPlacePuzzlePiece(pieceId) {
+            placePuzzlePiece(pieceId, pieceId);
+        }
+
+        function placePuzzlePiece(pieceId, slotId) {
+            if (pieceId !== slotId) {
+                document.getElementById('frutin-speech').innerText = '"¡Ups! Ese bloque no encaja en esa posición. Revisa el orden del registro."';
+                return;
+            }
+
+            const item = puzzleData.find(d => d.id === pieceId);
+            const slot = document.getElementById(`slot-${slotId}`);
+            const piece = document.getElementById(`piece-${pieceId}`);
+
+            if (slot && piece && !puzzlePlaced[pieceId - 1]) {
+                puzzlePlaced[pieceId - 1] = true;
+                piece.remove();
+
+                slot.className = `${item.bg} text-white p-3 rounded-xl border-2 border-white/40 flex items-center justify-between text-xs font-bold shadow-md`;
+                slot.innerHTML = `
+                    <span class="flex items-center gap-2"><i class="fa-solid ${item.icon} text-base"></i> ${item.text}</span>
+                    <span class="text-emerald-200 text-sm"><i class="fa-solid fa-circle-check"></i></span>
+                `;
+
+                const placedCount = puzzlePlaced.filter(Boolean).length;
+                document.getElementById('puzzle-status').innerText = `Piezas: ${placedCount}/4`;
+                updateEnergyBar(10);
+
+                if (placedCount === 4) {
+                    document.getElementById('sire-light').className = "w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_10px_#34d399]";
+                    document.getElementById('frutin-speech').innerText = '"¡Excelente! Has validado el SIRE. Ahora la escuela recibirá las raciones correctas."';
+                    setTimeout(() => {
+                        showWinModal(
+                            "¡SIRE Activado con Éxito!",
+                            "Nivel 1 Completado",
+                            "Has ordenado correctamente los cuatro pasos para que el Ministerio de Educación valide los datos y la alimentación llegue sin faltantes."
+                        );
+                    }, 600);
+                }
+            }
+        }
+
+        // --- LEVEL 2: PANTRY LOGIC ---
+        function initLevel2Pantry() {
+            const pantryGrid = document.getElementById('pantry-grid');
+            pantryGrid.innerHTML = '';
+            selectedPlateItems = { 1: null, 2: null, 3: null, 4: null };
+
+            pantryFoodItems.forEach(food => {
+                const item = document.createElement('button');
+                item.className = "bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 p-2.5 rounded-xl flex flex-col items-center text-center transition transform active:scale-95 text-slate-200";
+                item.innerHTML = `
+                    <i class="fa-solid ${food.icon} text-2xl ${food.color} mb-1"></i>
+                    <span class="text-[11px] font-extrabold leading-tight">${food.name}</span>
+                    <span class="text-[9px] text-slate-400 mt-1 uppercase">${food.category}</span>
+                `;
+                item.onclick = () => selectPantryFood(food);
+                pantryGrid.appendChild(item);
+            });
+        }
+
+        function selectPantryFood(food) {
+            const speech = document.getElementById('frutin-speech');
+            if (!food.healthy) {
+                speech.innerText = `"¡Cuidado! ${food.name} no forma parte del menú saludable del PAE. Elige opciones nutritivas."`;
+                updateEnergyBar(-5);
+                return;
+            }
+
+            selectedPlateItems[food.group] = food;
+            const slot = document.getElementById(`plate-slot-${food.group}`);
+            slot.className = "border-2 border-emerald-400 bg-emerald-100 rounded-lg flex flex-col items-center justify-center p-2 text-center -rotate-45 shadow-sm";
+            slot.innerHTML = `
+                <i class="fa-solid ${food.icon} text-xl ${food.color}"></i>
+                <span class="text-[10px] font-black text-slate-800 leading-tight mt-1">${food.name}</span>
+            `;
+
+            const filledCount = Object.values(selectedPlateItems).filter(Boolean).length;
+            document.getElementById('kitchen-counter').innerText = `Piezas del Menú: ${filledCount}/4`;
+            updateEnergyBar(10);
+            speech.innerText = `"¡Genial! Añadiste ${food.name}. Sigue completando los 4 grupos nutritivos."`;
+
+            if (filledCount === 4) {
+                speech.innerText = '"¡Plato perfecto! Tiene atol/bebida, proteína, cereal y fruta fresca según el programa PAE."';
+                setTimeout(() => {
+                    showWinModal(
+                        "¡Menú Nutritivo Preparado!",
+                        "Nivel 2 Completado",
+                        "¡Felicidades! Has combinado los 4 pilares fundamentales del menú escolar saludable: Bebida caliente/fría, Alimento sólido con proteína, Complemento de maíz/pan y Fruta fresca."
+                    );
+                }, 600);
+            }
+        }
+
+        // --- LEVEL 3: TRIVIA LOGIC ---
+        function initLevel3Trivia() {
+            currentTriviaIndex = 0;
+            triviaScore = 0;
+        }
+
+        function loadTriviaQuestion() {
+            const qData = triviaQuestions[currentTriviaIndex];
+            document.getElementById('trivia-progress').innerText = `Pregunta: ${currentTriviaIndex + 1}/${triviaQuestions.length}`;
+            document.getElementById('trivia-score').innerText = `Puntos: ${triviaScore}`;
+            document.getElementById('trivia-question-title').innerText = qData.q;
+            
+            const feedbackBox = document.getElementById('trivia-feedback-box');
+            feedbackBox.className = "mt-4 p-3 rounded-xl bg-slate-800 border border-slate-700 text-xs text-slate-300 flex items-center gap-2.5";
+            document.getElementById('trivia-feedback-text').innerText = "Selecciona la respuesta que mejor describa la misión del PAE.";
+
+            const optionsContainer = document.getElementById('trivia-options-container');
+            optionsContainer.innerHTML = '';
+
+            qData.options.forEach((opt, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full bg-slate-800 hover:bg-slate-700 border-2 border-slate-600 text-slate-100 p-3 rounded-xl font-bold text-xs md:text-sm text-left transition transform hover:scale-101 flex items-center gap-3";
+                btn.innerHTML = `
+                    <span class="w-7 h-7 rounded-lg bg-slate-700 text-amber-400 flex items-center justify-center font-black shrink-0 border border-slate-500">${String.fromCharCode(65 + idx)}</span>
+                    <span>${opt.text}</span>
+                `;
+                btn.onclick = () => handleTriviaAnswer(opt, qData);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function handleTriviaAnswer(option, qData) {
+            const speech = document.getElementById('frutin-speech');
+            const feedbackBox = document.getElementById('trivia-feedback-box');
+            const feedbackText = document.getElementById('trivia-feedback-text');
+
+            if (option.correct) {
+                triviaScore += 20;
+                updateEnergyBar(10);
+                speech.innerText = `"¡Respuesta Correcta! ${qData.explanation}"`;
+                
+                feedbackBox.className = "mt-4 p-3 rounded-xl bg-emerald-950/80 border border-emerald-500 text-xs text-emerald-200 flex items-center gap-2.5 animate-pulse";
+                feedbackText.innerText = qData.explanation;
+
+                setTimeout(() => {
+                    currentTriviaIndex++;
+                    if (currentTriviaIndex < triviaQuestions.length) {
+                        loadTriviaQuestion();
+                    } else {
+                        showWinModal(
+                            "¡Medalla de Super Nutrición!",
+                            "Trivia Completada 100%",
+                            `¡Increíble! Lograste ${triviaScore} puntos en la Trivia del PAE. Demostraste que conoces tus derechos y la importancia de la alimentación escolar con Fe y Alegría Guatemala.`
+                        );
+                    }
+                }, 1800);
+            } else {
+                speech.innerText = '"¡Ups! Esa no es la respuesta correcta. Revisa las pistas de Frutín e inténtalo de nuevo."';
+                feedbackBox.className = "mt-4 p-3 rounded-xl bg-red-950/80 border border-red-500 text-xs text-red-200 flex items-center gap-2.5";
+                feedbackText.innerText = "Respuesta incorrecta. Piensa en el derecho a la educación y nutrición legal de Guatemala.";
+                updateEnergyBar(-5);
+            }
+        }
+
+        // --- WIN MODAL DIALOG ---
+        function showWinModal(title, subtitle, text) {
+            document.getElementById('win-title').innerText = title;
+            document.getElementById('win-subtitle').innerText = subtitle;
+            document.getElementById('win-body').innerText = text;
+            document.getElementById('modal-success').classList.remove('hidden');
+        }
+
+        function advanceNextLevel() {
+            document.getElementById('modal-success').classList.add('hidden');
+            if (currentLevel < 2) {
+                switchLevel(currentLevel + 1);
+            } else {
+                switchLevel(0);
+                initLevel3Trivia();
+            }
+        }
+    </script>
+</body>
+</html>
